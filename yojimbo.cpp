@@ -2794,6 +2794,10 @@ namespace yojimbo
             }
         }
 
+        if (packet.numChannelEntries == 0) {
+			return false;
+        }
+
         packetBytes = WritePacket( context, *m_messageFactory, m_connectionConfig, packet, packetData, maxPacketBytes );
 
         return true;
