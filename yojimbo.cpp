@@ -3155,6 +3155,7 @@ namespace yojimbo
         m_clientId = 0;
         m_client = NULL;
         m_boundAddress = m_address;
+        m_netcodeState = NETCODE_CLIENT_STATE_DISCONNECTED;
     }
 
     Client::~Client()
@@ -3286,6 +3287,8 @@ namespace yojimbo
         {
             netcode_client_update( m_client, time );
             const int state = netcode_client_state( m_client );
+            m_netcodeState = state;
+
             if ( state < NETCODE_CLIENT_STATE_DISCONNECTED )
             {
                 Disconnect();

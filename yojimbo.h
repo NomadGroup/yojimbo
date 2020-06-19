@@ -5942,6 +5942,8 @@ namespace yojimbo
 
         const Address & GetAddress() const { return m_boundAddress; }
 
+        int GetNetcodeState() const { return m_netcodeState; }
+
     private:
 
         bool GenerateInsecureConnectToken( uint8_t * connectToken, 
@@ -5968,6 +5970,7 @@ namespace yojimbo
 
         ClientServerConfig m_config;                    ///< Client/server configuration.
         netcode_client_t * m_client;                    ///< netcode.io client data.
+        int m_netcodeState;                             ///< netcode.io last client state.
         Address m_address;                              ///< Original address passed to ctor.
         Address m_boundAddress;                         ///< Address after socket bind, eg. with valid port
         uint64_t m_clientId;                            ///< The globally unique client id (set on each call to connect)
