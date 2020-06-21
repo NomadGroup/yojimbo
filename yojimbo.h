@@ -5024,6 +5024,18 @@ namespace yojimbo
         PacketEntry * m_packetEntries;                  ///< Pointer to dynamically allocated packet entries. This is where buffered packets are stored.
     };
 
+    /**
+        Client disconnect reason (as perceived by server).
+    */
+
+	enum ClientDisconnectReason {
+		CLIENT_DISCONNECT_QUIT = 0,
+		CLIENT_DISCONNECT_KICK = -1,
+		CLIENT_DISCONNECT_KICK_ALL = -2,
+		CLIENT_DISCONNECT_TIMEOUT = -3,
+        CLIENT_DISCONNECT_ERROR = -4
+	};
+
     /** 
         Specifies the message factory and callbacks for clients and servers.
         An instance of this class is passed into the client and server constructors. 
@@ -5112,9 +5124,10 @@ namespace yojimbo
             Override this to get a callback when a client disconnects from the server.
          */
 
-        virtual void OnServerClientDisconnected( int clientIndex )
+        virtual void OnServerClientDisconnected(int clientIndex, ClientDisconnectReason reason)
         {
             (void) clientIndex;
+			(void) reason;
         }
     };
 
@@ -5178,7 +5191,7 @@ namespace yojimbo
             @see Server::IsClientConnected
          */
 
-        virtual void DisconnectClient( int clientIndex ) = 0;
+        virtual void DisconnectClient( int clientIndex, ClientDisconnectReason ) = 0;
 
         /**
             Disconnect all clients from the server.
@@ -5441,6 +5454,8 @@ namespace yojimbo
 
         MessageFactory & GetClientMessageFactory( int clientIndex );
 
+        Allocator & GetClientAllocator( int clientIndex );
+
         NetworkSimulator * GetNetworkSimulator() { return m_networkSimulator; }
 
         reliable_endpoint_t * GetClientEndpoint( int clientIndex );
@@ -5495,7 +5510,7 @@ namespace yojimbo
 
         void Stop();
 
-        void DisconnectClient( int clientIndex );
+        void DisconnectClient(int clientIndex, ClientDisconnectReason);
 
         void DisconnectAllClients();
 
@@ -5521,17 +5536,17 @@ namespace yojimbo
 
         const Address & GetAddress() const { return m_boundAddress; }
 
-    private:
+    protected:
 
         void TransmitPacketFunction( int clientIndex, uint16_t packetSequence, uint8_t * packetData, int packetBytes );
 
         int ProcessPacketFunction( int clientIndex, uint16_t packetSequence, uint8_t * packetData, int packetBytes );
 
-        void ConnectDisconnectCallbackFunction( int clientIndex, int connected );
+        void ConnectDisconnectCallbackFunction( int clientIndex, int connected, int reason );
 
         void SendLoopbackPacketCallbackFunction( int clientIndex, const uint8_t * packetData, int packetBytes, uint64_t packetSequence );
 
-        static void StaticConnectDisconnectCallbackFunction( void * context, int clientIndex, int connected );
+        static void StaticConnectDisconnectCallbackFunction( void * context, int clientIndex, int connected, int reason );
 
         static void StaticSendLoopbackPacketCallbackFunction( void * context, int clientIndex, const uint8_t * packetData, int packetBytes, uint64_t packetSequence );
 
@@ -5927,6 +5942,7 @@ namespace yojimbo
         void ReceivePackets();
 
         void AdvanceTime( double time );
+		void UpdateState(double time);
 
         int GetClientIndex() const;
 
@@ -5944,7 +5960,7 @@ namespace yojimbo
 
         int GetNetcodeState() const { return m_netcodeState; }
 
-    private:
+    protected:
 
         bool GenerateInsecureConnectToken( uint8_t * connectToken, 
                                            const uint8_t privateKey[], 

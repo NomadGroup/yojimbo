@@ -2794,12 +2794,8 @@ namespace yojimbo
             }
         }
 
-        if (packet.numChannelEntries == 0) {
-			return false;
-        }
 
         packetBytes = WritePacket( context, *m_messageFactory, m_connectionConfig, packet, packetData, maxPacketBytes );
-
         return true;
     }
 
@@ -3284,46 +3280,47 @@ namespace yojimbo
         }
     }
 
-    void Client::AdvanceTime( double time )
-    {
-        BaseClient::AdvanceTime( time );
-        if ( m_client )
-        {
-            netcode_client_update( m_client, time );
-            const int state = netcode_client_state( m_client );
-            m_netcodeState = state;
+    void Client::AdvanceTime(double time)
+	{
+		BaseClient::AdvanceTime(time);
+		if (m_client) {
+			netcode_client_update(m_client, time);
+		}
+	}
 
-            if ( state < NETCODE_CLIENT_STATE_DISCONNECTED )
-            {
-                Disconnect();
-                SetClientState( CLIENT_STATE_ERROR );
-            }
-            else if ( state == NETCODE_CLIENT_STATE_DISCONNECTED )
-            {
-                Disconnect();
-                SetClientState( CLIENT_STATE_DISCONNECTED );
-            }
-            else if ( state == NETCODE_CLIENT_STATE_SENDING_CONNECTION_REQUEST )
-            {
-                SetClientState( CLIENT_STATE_CONNECTING );
-            }
-            else
-            {
-                SetClientState( CLIENT_STATE_CONNECTED );
-            }
-            NetworkSimulator * networkSimulator = GetNetworkSimulator();
-            if ( networkSimulator && networkSimulator->IsActive() )
-            {
-                uint8_t ** packetData = (uint8_t**) alloca( sizeof( uint8_t*) * m_config.maxSimulatorPackets );
-                int * packetBytes = (int*) alloca( sizeof(int) * m_config.maxSimulatorPackets );
-                int numPackets = networkSimulator->ReceivePackets( m_config.maxSimulatorPackets, packetData, packetBytes, NULL );
-                for ( int i = 0; i < numPackets; ++i )
-                {
-                    netcode_client_send_packet( m_client, (uint8_t*) packetData[i], packetBytes[i] );
-                    YOJIMBO_FREE( networkSimulator->GetAllocator(), packetData[i] );
-                }
-            }
+    void Client::UpdateState(double time)
+	{
+        if (!m_client) {
+			return;
         }
+
+        netcode_client_update_state(m_client, time);
+
+		const int state = netcode_client_state(m_client);
+		m_netcodeState = state;
+
+		if (state < NETCODE_CLIENT_STATE_DISCONNECTED) {
+			Disconnect();
+			SetClientState(CLIENT_STATE_ERROR);
+		} else if (state == NETCODE_CLIENT_STATE_DISCONNECTED) {
+			Disconnect();
+			SetClientState(CLIENT_STATE_DISCONNECTED);
+		} else if (state == NETCODE_CLIENT_STATE_SENDING_CONNECTION_REQUEST) {
+			SetClientState(CLIENT_STATE_CONNECTING);
+		} else {
+			SetClientState(CLIENT_STATE_CONNECTED);
+		}
+
+		NetworkSimulator* networkSimulator = GetNetworkSimulator();
+		if (networkSimulator && networkSimulator->IsActive()) {
+			uint8_t** packetData = (uint8_t**)alloca(sizeof(uint8_t*) * m_config.maxSimulatorPackets);
+			int* packetBytes = (int*)alloca(sizeof(int) * m_config.maxSimulatorPackets);
+			int numPackets = networkSimulator->ReceivePackets(m_config.maxSimulatorPackets, packetData, packetBytes, NULL);
+			for (int i = 0; i < numPackets; ++i) {
+				netcode_client_send_packet(m_client, (uint8_t*)packetData[i], packetBytes[i]);
+				YOJIMBO_FREE(networkSimulator->GetAllocator(), packetData[i]);
+			}
+		}
     }
 
     int Client::GetClientIndex() const
@@ -3565,7 +3562,7 @@ namespace yojimbo
                 if ( m_clientConnection[i]->GetErrorLevel() != CONNECTION_ERROR_NONE )
                 {
                     yojimbo_printf( YOJIMBO_LOG_LEVEL_ERROR, "client %d connection is in error state. disconnecting client\n", m_clientConnection[i]->GetErrorLevel() );
-                    DisconnectClient( i );
+					DisconnectClient(i, CLIENT_DISCONNECT_ERROR);
                     continue;
                 }
                 reliable_endpoint_update( m_clientEndpoint[i], m_time );
@@ -3716,6 +3713,14 @@ namespace yojimbo
         return *m_clientMessageFactory[clientIndex];
     }
 
+    Allocator& BaseServer::GetClientAllocator( int clientIndex )
+	{
+		yojimbo_assert(IsRunning());
+		yojimbo_assert(clientIndex >= 0);
+		yojimbo_assert(clientIndex < m_maxClients);
+		return *m_clientAllocator[clientIndex];
+	}
+
     reliable_endpoint_t * BaseServer::GetClientEndpoint( int clientIndex )
     {
         yojimbo_assert( IsRunning() ); 
@@ -3825,10 +3830,10 @@ namespace yojimbo
         BaseServer::Stop();
     }
 
-    void Server::DisconnectClient( int clientIndex )
+    void Server::DisconnectClient( int clientIndex, ClientDisconnectReason reason )
     {
         yojimbo_assert( m_server );
-        netcode_server_disconnect_client( m_server, clientIndex );
+		netcode_server_disconnect_client(m_server, clientIndex, reason);
     }
 
     void Server::DisconnectAllClients()
@@ -3923,7 +3928,7 @@ namespace yojimbo
 
     void Server::DisconnectLoopbackClient( int clientIndex )
     {
-        netcode_server_disconnect_loopback_client( m_server, clientIndex );
+		netcode_server_disconnect_loopback_client(m_server, clientIndex, NETCODE_SERVER_DISCONNECT_KICK);
     }
 
     bool Server::IsLoopbackClient( int clientIndex ) const
@@ -3955,11 +3960,22 @@ namespace yojimbo
         return (int) GetClientConnection(clientIndex).ProcessPacket( GetContext(), packetSequence, packetData, packetBytes );
     }
 
-    void Server::ConnectDisconnectCallbackFunction( int clientIndex, int connected )
+    void Server::ConnectDisconnectCallbackFunction( int clientIndex, int connected, int reason )
     {
         if ( connected == 0 )
         {
-            GetAdapter().OnServerClientDisconnected( clientIndex );
+			ClientDisconnectReason eReason = CLIENT_DISCONNECT_QUIT;
+			switch (reason) {
+			case NETCODE_SERVER_DISCONNECT_KICK:
+			case NETCORE_SERVER_DISCONNECT_KICK_ALL:
+				eReason = CLIENT_DISCONNECT_KICK;
+
+            case NETCODE_SERVER_DISCONNECT_TIMEOUT:
+				eReason = CLIENT_DISCONNECT_TIMEOUT;
+            }
+
+            GetAdapter().OnServerClientDisconnected(clientIndex, eReason);
+
             reliable_endpoint_reset( GetClientEndpoint( clientIndex ) );
             GetClientConnection( clientIndex ).Reset();
             NetworkSimulator * networkSimulator = GetNetworkSimulator();
@@ -3979,10 +3995,10 @@ namespace yojimbo
         GetAdapter().ServerSendLoopbackPacket( clientIndex, packetData, packetBytes, packetSequence );
     }
 
-    void Server::StaticConnectDisconnectCallbackFunction( void * context, int clientIndex, int connected )
+    void Server::StaticConnectDisconnectCallbackFunction( void * context, int clientIndex, int connected, int reason )
     {
         Server * server = (Server*) context;
-        server->ConnectDisconnectCallbackFunction( clientIndex, connected );
+        server->ConnectDisconnectCallbackFunction( clientIndex, connected, reason );
     }
 
     void Server::StaticSendLoopbackPacketCallbackFunction( void * context, int clientIndex, const uint8_t * packetData, int packetBytes, uint64_t packetSequence )
