@@ -136,7 +136,7 @@
 #if YOJIMBO_NDEBUG
 #define YOJIMBO_FILEANDLINE nullptr, 0
 #else
-#define YOJIMBO_FILEANDLINE YOJIMBO_FILEANDLINE
+#define YOJIMBO_FILEANDLINE __FILE__, __LINE__
 #endif
 
 #include <stdint.h>
