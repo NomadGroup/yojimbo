@@ -5952,7 +5952,7 @@ namespace yojimbo
         void ReceivePackets();
 
         void AdvanceTime( double time );
-		void UpdateState(double time);
+		void UpdateState(double time, bool& shouldDisconnect);
 
         int GetClientIndex() const;
 

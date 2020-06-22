@@ -3290,7 +3290,7 @@ namespace yojimbo
 		}
 	}
 
-    void Client::UpdateState(double time)
+    void Client::UpdateState(double time, bool& shouldDisconnect)
 	{
         if (!m_client) {
 			return;
@@ -3302,10 +3302,10 @@ namespace yojimbo
 		m_netcodeState = state;
 
 		if (state < NETCODE_CLIENT_STATE_DISCONNECTED) {
-			Disconnect();
+			shouldDisconnect = true;
 			SetClientState(CLIENT_STATE_ERROR);
 		} else if (state == NETCODE_CLIENT_STATE_DISCONNECTED) {
-			Disconnect();
+			shouldDisconnect = true;
 			SetClientState(CLIENT_STATE_DISCONNECTED);
 		} else if (state == NETCODE_CLIENT_STATE_SENDING_CONNECTION_REQUEST) {
 			SetClientState(CLIENT_STATE_CONNECTING);
