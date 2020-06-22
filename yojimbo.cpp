@@ -1988,6 +1988,7 @@ namespace yojimbo
             {
                 yojimbo_assert( sendQueueEntry->message );
                 yojimbo_assert( sendQueueEntry->message->GetId() == messageId );
+				sendQueueEntry->message->OnAck();
                 m_messageFactory->ReleaseMessage( sendQueueEntry->message );
                 m_messageSendQueue->Remove( messageId );
                 UpdateOldestUnackedMessageId();
@@ -2008,6 +2009,7 @@ namespace yojimbo
                     m_sendBlock->active = false;
                     MessageSendQueueEntry * sendQueueEntry = m_messageSendQueue->Find( messageId );
                     yojimbo_assert( sendQueueEntry );
+					sendQueueEntry->message->OnAck();
                     m_messageFactory->ReleaseMessage( sendQueueEntry->message );
                     m_messageSendQueue->Remove( messageId );
                     UpdateOldestUnackedMessageId();

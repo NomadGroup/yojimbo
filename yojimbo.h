@@ -3743,6 +3743,12 @@ namespace yojimbo
 
         virtual bool SerializeInternal ( MeasureStream & stream ) = 0;
 
+        /**
+            Virtual acknowledge callback.
+            Called when the message was sent on a reliable channel and an ack packet was received.
+        */
+        virtual void OnAck() {};
+
     protected:
 
         /**
