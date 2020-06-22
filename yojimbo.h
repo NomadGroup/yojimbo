@@ -133,6 +133,12 @@
 
 #endif // #ifndef YOJIMBO_NDEBUG
 
+#if YOJIMBO_NDEBUG
+#define YOJIMBO_FILEANDLINE nullptr, 0
+#else
+#define YOJIMBO_FILEANDLINE YOJIMBO_FILEANDLINE
+#endif
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -432,7 +438,7 @@ do                                                                              
 {                                                                                           \
     if ( !(condition) )                                                                     \
     {                                                                                       \
-        yojimbo_assert_function( #condition, __FUNCTION__, __FILE__, __LINE__ );            \
+        yojimbo_assert_function( #condition, __FUNCTION__, YOJIMBO_FILEANDLINE );            \
         exit(1);                                                                            \
     }                                                                                       \
 } while(0)
@@ -475,16 +481,16 @@ namespace yojimbo
     class Allocator & GetDefaultAllocator();
 
     /// Macro for creating a new object instance with a yojimbo allocator.
-    #define YOJIMBO_NEW( a, T, ... ) ( new ( (a).Allocate( sizeof(T), __FILE__, __LINE__ ) ) T(__VA_ARGS__) )
+    #define YOJIMBO_NEW( a, T, ... ) ( new ( (a).Allocate( sizeof(T), YOJIMBO_FILEANDLINE ) ) T(__VA_ARGS__) )
 
     /// Macro for deleting an object created with a yojimbo allocator.
-    #define YOJIMBO_DELETE( a, T, p ) do { if (p) { (p)->~T(); (a).Free( p, __FILE__, __LINE__ ); p = NULL; } } while (0)    
+    #define YOJIMBO_DELETE( a, T, p ) do { if (p) { (p)->~T(); (a).Free( p, YOJIMBO_FILEANDLINE ); p = NULL; } } while (0)    
 
     /// Macro for allocating a block of memory with a yojimbo allocator. 
-    #define YOJIMBO_ALLOCATE( a, bytes ) (a).Allocate( (bytes), __FILE__, __LINE__ )
+    #define YOJIMBO_ALLOCATE( a, bytes ) (a).Allocate( (bytes), YOJIMBO_FILEANDLINE )
 
     /// Macro for freeing a block of memory created with a yojimbo allocator.
-    #define YOJIMBO_FREE( a, p ) do { if ( p ) { (a).Free( p, __FILE__, __LINE__ ); p = NULL; } } while(0)
+    #define YOJIMBO_FREE( a, p ) do { if ( p ) { (a).Free( p, YOJIMBO_FILEANDLINE ); p = NULL; } } while(0)
 
     /// Allocator error level.
     enum AllocatorErrorLevel
