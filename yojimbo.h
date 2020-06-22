@@ -115,23 +115,23 @@
 #define YOJIMBO_PLATFORM YOJIMBO_PLATFORM_UNIX
 #endif
 
-#define YOJIMBO_SERIALIZE_CHECKS                    1
+#ifndef YOJIMBO_NDEBUG
 
-#ifndef NDEBUG
-
+#define YOJIMBO_ENABLE_LOGGING                      1
 #define YOJIMBO_DEBUG_MEMORY_LEAKS                  1
 #define YOJIMBO_DEBUG_MESSAGE_LEAKS                 1
 #define YOJIMBO_DEBUG_MESSAGE_BUDGET                1
+#define YOJIMBO_SERIALIZE_CHECKS                    1
 
-#else // #ifndef NDEBUG
+#else // #ifndef YOJIMBO_NDEBUG
 
+#define YOJIMBO_ENABLE_LOGGING                      0
 #define YOJIMBO_DEBUG_MEMORY_LEAKS                  0
 #define YOJIMBO_DEBUG_MESSAGE_LEAKS                 0
 #define YOJIMBO_DEBUG_MESSAGE_BUDGET                0
+#define YOJIMBO_SERIALIZE_CHECKS                    0
 
-#endif // #ifndef NDEBUG
-
-#define YOJIMBO_ENABLE_LOGGING                      1
+#endif // #ifndef YOJIMBO_NDEBUG
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -426,7 +426,7 @@ extern void (*yojimbo_assert_function)( const char *, const char *, const char *
     @see yojimbo_set_assert_functio
  */
 
-#ifndef NDEBUG
+#ifndef YOJIMBO_NDEBUG
 #define yojimbo_assert( condition )                                                         \
 do                                                                                          \
 {                                                                                           \
@@ -1821,11 +1821,11 @@ namespace yojimbo
             @see BitWriter
          */
 
-#ifndef NDEBUG
+#ifndef YOJIMBO_NDEBUG
         BitReader( const void * data, int bytes ) : m_data( (const uint32_t*) data ), m_numBytes( bytes ), m_numWords( ( bytes + 3 ) / 4)
-#else // #ifndef NDEBUG
+#else // #ifndef YOJIMBO_NDEBUG
         BitReader( const void * data, int bytes ) : m_data( (const uint32_t*) data ), m_numBytes( bytes )
-#endif // #ifndef NDEBUG
+#endif // #ifndef YOJIMBO_NDEBUG
         {
             yojimbo_assert( data );
             m_numBits = m_numBytes * 8;
@@ -1987,9 +1987,9 @@ namespace yojimbo
         uint64_t m_scratch;                 ///< The scratch value. New data is read in 32 bits at a top to the left of this buffer, and data is read off to the right.
         int m_numBits;                      ///< Number of bits to read in the buffer. Of course, we can't *really* know this so it's actually m_numBytes * 8.
         int m_numBytes;                     ///< Number of bytes to read in the buffer. We know this, and this is the non-rounded up version.
-#ifndef NDEBUG
+#ifndef YOJIMBO_NDEBUG
         int m_numWords;                     ///< Number of words to read in the buffer. This is rounded up to the next word if necessary.
-#endif // #ifndef NDEBUG
+#endif // #ifndef YOJIMBO_NDEBUG
         int m_bitsRead;                     ///< Number of bits read from the buffer so far.
         int m_scratchBits;                  ///< Number of bits currently in the scratch value. If the user wants to read more bits than this, we have to go fetch another dword from memory.
         int m_wordIndex;                    ///< Index of the next word to read from memory.
@@ -2210,8 +2210,6 @@ namespace yojimbo
 #if YOJIMBO_SERIALIZE_CHECKS
             SerializeAlign();
             SerializeBits( SerializeCheckValue, 32 );
-#else // #if YOJIMBO_SERIALIZE_CHECKS
-            (void)string;
 #endif // #if YOJIMBO_SERIALIZE_CHECKS
             return true;
         }

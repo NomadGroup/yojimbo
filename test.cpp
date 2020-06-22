@@ -39,7 +39,7 @@ static void CheckHandler( const char * condition,
                           int line )
 {
     printf( "check failed: ( %s ), function %s, file %s, line %d\n", condition, function, file, line );
-#ifndef NDEBUG
+#ifndef YOJIMBO_NDEBUG
     #if defined( __GNUC__ )
         __builtin_trap();
     #elif defined( _MSC_VER )
