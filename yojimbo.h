@@ -161,6 +161,9 @@ struct netcode_server_t;
 struct netcode_client_t;
 struct reliable_endpoint_t;
 
+struct netcode_address_t;
+struct netcode_connection_query_packet_t;
+
 /// The library namespace.
 
 namespace yojimbo
@@ -5139,6 +5142,18 @@ namespace yojimbo
             (void) clientIndex;
 			(void) reason;
         }
+
+        /**
+            Override this to process queries sent to the server.
+         */
+        
+        virtual void OnServerProcessQuery(const Address& from, uint8_t queryType, int payloadBytes, ReadStream& payload)
+        {
+            (void) from;
+            (void) queryType;
+			(void) payloadBytes;
+            (void) payload;
+        }
     };
 
     /**
@@ -5546,11 +5561,15 @@ namespace yojimbo
 
         const Address & GetAddress() const { return m_boundAddress; }
 
+        void SendQueryResponse(const Address&, const uint8_t* packetData, int packetBytes);
+
     protected:
 
         void TransmitPacketFunction( int clientIndex, uint16_t packetSequence, uint8_t * packetData, int packetBytes );
 
         int ProcessPacketFunction( int clientIndex, uint16_t packetSequence, uint8_t * packetData, int packetBytes );
+
+        void ProcessQueryPacket(const Address& from, uint8_t queryType, const uint8_t* payloadData, int payloadBytes);
 
         void ConnectDisconnectCallbackFunction( int clientIndex, int connected, int reason );
 
@@ -5559,6 +5578,8 @@ namespace yojimbo
         static void StaticConnectDisconnectCallbackFunction( void * context, int clientIndex, int connected, int reason );
 
         static void StaticSendLoopbackPacketCallbackFunction( void * context, int clientIndex, const uint8_t * packetData, int packetBytes, uint64_t packetSequence );
+
+        static void StaticHandleQueryPacket(void* context, netcode_address_t* from, netcode_connection_query_packet_t* packet);
 
         ClientServerConfig m_config;
         netcode_server_t * m_server;

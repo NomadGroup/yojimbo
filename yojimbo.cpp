@@ -3806,7 +3806,8 @@ namespace yojimbo
         netcodeConfig.callback_context = this;
         netcodeConfig.connect_disconnect_callback = StaticConnectDisconnectCallbackFunction;
         netcodeConfig.send_loopback_packet_callback = StaticSendLoopbackPacketCallbackFunction;
-        
+		netcodeConfig.handle_query_packet_callback = StaticHandleQueryPacket;
+
         m_server = netcode_server_create(addressString, &netcodeConfig, GetTime());
         
         if ( !m_server )
@@ -3962,6 +3963,38 @@ namespace yojimbo
         return (int) GetClientConnection(clientIndex).ProcessPacket( GetContext(), packetSequence, packetData, packetBytes );
     }
 
+    void Server::ProcessQueryPacket(const Address& from, uint8_t queryType, const uint8_t* payloadData, int payloadBytes)
+	{
+		ReadStream stream(GetGlobalAllocator(), payloadData, payloadBytes);
+		GetAdapter().OnServerProcessQuery(from, queryType, payloadBytes, stream);
+	}
+
+    void Server::SendQueryResponse(const Address& to, const uint8_t* packetData, int packetBytes)
+	{
+		if (!packetData || packetBytes == 0) {
+			return;
+		}
+
+		if (!to.IsValid()) {
+			return;
+		}
+
+		// yojimbo::Address -> netcode_address_t
+		netcode_address_t addr;
+		addr.port = to.GetPort();
+
+		if (to.GetType() == ADDRESS_IPV4) {
+			addr.type = NETCODE_ADDRESS_IPV4;
+			memcpy(&addr.data.ipv4, to.GetAddress4(), sizeof(uint8_t) * 4);
+		} else {
+			addr.type = NETCODE_ADDRESS_IPV6;
+			memcpy(&addr.data.ipv6, to.GetAddress6(), sizeof(uint16_t) * 8);
+		}
+
+		// Send
+		netcode_server_send_packet_to_address(m_server, &addr, packetData, packetBytes);
+	}
+
     void Server::ConnectDisconnectCallbackFunction( int clientIndex, int connected, int reason )
     {
         if ( connected == 0 )
@@ -4008,6 +4041,14 @@ namespace yojimbo
         Server * server = (Server*) context;
         server->SendLoopbackPacketCallbackFunction( clientIndex, packetData, packetBytes, packetSequence );
     }
+
+    void Server::StaticHandleQueryPacket(void* context, struct netcode_address_t* from, struct netcode_connection_query_packet_t* packet)
+	{
+		Server* server = (Server*)context;
+		const Address addr(from->data.ipv4, from->port);
+
+        server->ProcessQueryPacket(addr, packet->query_type, &packet->payload[0], packet->payload_size);
+	}
 }
 
 // ---------------------------------------------------------------------------------
