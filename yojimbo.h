@@ -5049,6 +5049,18 @@ namespace yojimbo
         CLIENT_DISCONNECT_ERROR = -4
 	};
 
+    /**
+        Provide a type for the allocator.
+    */
+
+	enum AllocatorTag {
+		ALLOCATOR_TAG_GENERIC,
+        ALLOCATOR_TAG_CLIENT,
+        ALLOCATOR_TAG_SERVER_GLOBAL,
+        ALLOCATOR_TAG_SERVER_FOR_CLIENT
+	};
+
+
     /** 
         Specifies the message factory and callbacks for clients and servers.
         An instance of this class is passed into the client and server constructors. 
@@ -5069,7 +5081,7 @@ namespace yojimbo
             @returns A pointer to the allocator instance you created.
          */
 
-        virtual Allocator * CreateAllocator( Allocator & allocator, void * memory, size_t bytes )
+        virtual Allocator* CreateAllocator(Allocator& allocator, void* memory, size_t bytes, AllocatorTag)
         {
             return YOJIMBO_NEW( allocator, TLSF_Allocator, memory, bytes );
         }
