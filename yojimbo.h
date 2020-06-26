@@ -3787,7 +3787,7 @@ namespace yojimbo
             yojimbo_assert( m_refCount == 0 );
         }
 
-    private:
+    protected:
 
         friend class MessageFactory;
       
