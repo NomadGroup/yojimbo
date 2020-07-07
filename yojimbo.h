@@ -3752,8 +3752,6 @@ namespace yojimbo
         */
         virtual void OnAck() {};
 
-    protected:
-
         /**
             Set the message type.
             Called by the message factory after it creates a message.
@@ -3776,6 +3774,8 @@ namespace yojimbo
          */
 
         void Release() { yojimbo_assert( m_refCount > 0 ); m_refCount--; }
+
+    protected:
 
         /**
             Message destructor.
